@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArchSub Premium Progress Widget</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-bg: #121212;
+            --accent-color: #E67E22; /* ArchSub 건축가 오렌지 */
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --text-main: #FFFFFF;
+            --text-sub: #888888;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: transparent; /* 노션 배경색에 맞춤 */
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* 위젯 컨테이너 */
+        .widget-card {
+            background: var(--primary-bg);
+            width: 340px;
+            padding: 24px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            position: relative;
+        }
+
+        /* 헤더 부분 */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 20px;
+        }
+
+        .title-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--accent-color);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .task-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .percentage {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1;
+        }
+
+        /* 프로그레스 바 */
+        .progress-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 16px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%; /* JS로 제어 */
+            background: linear-gradient(90deg, #D35400, #E67E22);
+            box-shadow: 0 0 15px rgba(230, 126, 34, 0.5);
+            border-radius: 10px;
+            transition: width 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+            position: relative;
+        }
+
+        /* 광택 효과 애니메이션 */
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(
+                90deg,
+                rgba(255,255,255,0) 0%,
+                rgba(255,255,255,0.2) 50%,
+                rgba(255,255,255,0) 100%
+            );
+            animation: shine 3s infinite;
+        }
+
+        @keyframes shine {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(100%); }
+        }
+
+        /* 하단 상세 정보 */
+        .footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-sub);
+        }
+
+        .info-box span {
+            display: block;
+        }
+
+        .info-val {
+            color: #ccc;
+            font-weight: 600;
+            margin-top: 2px;
+        }
+
+        .d-day-badge {
+            background: var(--glass-bg);
+            padding: 4px 10px;
+            border-radius: 6px;
+            color: var(--text-main);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="widget-card">
+        <div class="header">
+            <div class="title-group">
+                <div class="label" id="label">Phase Progress</div>
+                <div class="task-name" id="name">ArchSub Project</div>
+            </div>
+            <div class="percentage" id="percentText">0%</div>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-fill" id="barFill"></div>
+        </div>
+
+        <div class="footer">
+            <div class="info-box">
+                <span>START DATE</span>
+                <span class="info-val" id="startStr">-</span>
+            </div>
+            <div class="d-day-badge" id="ddayText">D-0</div>
+            <div class="info-box" style="text-align: right;">
+                <span>TARGET DATE</span>
+                <span class="info-val" id="endStr">-</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateProgress() {
+            const params = new URLSearchParams(window.location.search);
+            const name = params.get('name') || "ArchSub Project";
+            const start = new Date(params.get('start'));
+            const end = new Date(params.get('end'));
+            const today = new Date();
+
+            // 텍스트 업데이트
+            document.getElementById('name').innerText = name;
+            document.getElementById('startStr').innerText = params.get('start') || "2024.01.01";
+            document.getElementById('endStr').innerText = params.get('end') || "2024.12.31";
+
+            if (!isNaN(start) && !isNaN(end)) {
+                const total = end - start;
+                const elapsed = today - start;
+                const remaining = end - today;
+                
+                let percent = Math.floor((elapsed / total) * 100);
+                percent = Math.max(0, Math.min(100, percent));
+
+                const dday = Math.ceil(remaining / (1000 * 60 * 60 * 24));
+
+                // 숫자 서서히 올라가는 효과
+                setTimeout(() => {
+                    document.getElementById('percentText').innerText = percent + "%";
+                    document.getElementById('barFill').style.width = percent + "%";
+                    document.getElementById('ddayText').innerText = dday >= 0 ? `D-${dday}` : `D+${Math.abs(dday)}`;
+                }, 100);
+            }
+        }
+
+        updateProgress();
+    </script>
+</body>
+</html>
